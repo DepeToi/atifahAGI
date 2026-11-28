@@ -40,16 +40,10 @@ Docker Desktop 使用 WSL2 后端（Windows 11 默认）：
 
 ## 3. 启动中间件
 
-先准备本地环境变量：Nacos 3 启动脚本强制要求 `NACOS_AUTH_TOKEN`（base64，解码后 ≥32 字节），
-缺失时 compose 会直接报错退出。
-
-```bash
-cd deploy/docker-compose
-cp .env.example .env
-openssl rand -base64 32        # 把输出填入 .env 的 NACOS_AUTH_TOKEN
-```
-
-`.env` 已被 `.gitignore` 忽略，禁止提交；`.env.example` 只放生成方式。
+Nacos 3 启动脚本强制要求 `NACOS_AUTH_TOKEN`（base64，解码后 ≥32 字节）；compose 已内置
+本地开发哑值（本地 `AUTH_ENABLE=false`，token 仅满足启动校验，gitleaks 放行），
+无需任何本地环境文件即可启动。需要覆盖时用 shell 环境变量注入 `NACOS_AUTH_TOKEN`
+（生产由生产部署资产注入真实 token，禁止沿用哑值）。
 
 然后一键拉起全部中间件：
 
@@ -168,14 +162,14 @@ Nacos 已发布 `common-application.yaml`（含同名键）时优先生效。
 构建镜像并启动全部后端：
 
 ```bash
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml up -d --build
 ```
 
 首次构建会拉取基础镜像并逐个打镜像；日常只启动需要的服务即可（端口与方案 A 相同，不能同时运行）：
 
 ```bash
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml up -d --build gateway user-service
 ```
 
@@ -187,7 +181,7 @@ docker compose --env-file deploy/docker-compose/.env \
 
 ```bash
 APP_UID=$(id -u) APP_GID=$(id -g) \
-  docker compose --env-file deploy/docker-compose/.env \
+  docker compose \
   -f deploy/docker-compose/docker-compose.app.yml up -d --build
 ```
 
@@ -206,7 +200,7 @@ docker compose -f atifah-services/user-service/docker-compose.yml down
 单服务 compose 与统一 compose 的镜像 tag、容器名、端口完全一致，**同一个服务不能同时用两种方式运行**；
 统一 compose 只是复用同一批模块 Dockerfile 做全量编排。
 
-单服务 compose 同样把仓库根 `logs/` 挂载到 `/app/logs`。模块目录下没有 `.env` 模板，
+单服务 compose 同样把仓库根 `logs/` 挂载到 `/app/logs`。
 `APP_UID` / `APP_GID` 需通过 shell 环境变量传入，例如：
 
 ```bash
@@ -231,25 +225,25 @@ APP_UID=$(id -u) APP_GID=$(id -g) \
 - 国内网络拉取基础镜像受限时，可覆盖镜像源后再构建：
   ```bash
   BASE_IMAGE=docker.m.daocloud.io/library/eclipse-temurin:21-jre-jammy \
-    docker compose --env-file deploy/docker-compose/.env \
+    docker compose \
       -f deploy/docker-compose/docker-compose.app.yml up -d --build
   ```
-- 单服务 compose 不读取 `deploy/docker-compose/.env`；覆盖 `BASE_IMAGE` / `APP_MEM_LIMIT` 等变量时用
-  shell 环境变量，或在对应模块目录放 `.env`（已被 `.gitignore` 忽略）。
+- 单服务 compose 与统一 compose 一致：覆盖 `BASE_IMAGE` / `APP_MEM_LIMIT` 等变量时用
+  shell 环境变量（或在对应模块目录放 `.env`，已被 `.gitignore` 忽略）。
 
 查看状态与日志：
 
 ```bash
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml ps
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml logs -f gateway
 ```
 
 停止/清理（只影响后端容器，不动中间件）：
 
 ```bash
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml down
 ```
 
@@ -259,9 +253,9 @@ docker compose --env-file deploy/docker-compose/.env \
 
 | 操作 | 命令 | 容器 | 镜像 |
 | --- | --- | --- | --- |
-| 停止服务，保留容器 | `docker compose --env-file deploy/docker-compose/.env -f deploy/docker-compose/docker-compose.app.yml stop` | 停止 | 保留 |
-| 删除容器，保留镜像 | `docker compose --env-file deploy/docker-compose/.env -f deploy/docker-compose/docker-compose.app.yml down` | 删除 | 保留 |
-| 删除容器与服务镜像 | `docker compose --env-file deploy/docker-compose/.env -f deploy/docker-compose/docker-compose.app.yml down --rmi all` | 删除 | 删除 |
+| 停止服务，保留容器 | `docker compose -f deploy/docker-compose/docker-compose.app.yml stop` | 停止 | 保留 |
+| 删除容器，保留镜像 | `docker compose -f deploy/docker-compose/docker-compose.app.yml down` | 删除 | 保留 |
+| 删除容器与服务镜像 | `docker compose -f deploy/docker-compose/docker-compose.app.yml down --rmi all` | 删除 | 删除 |
 | 清理悬空镜像 | `docker image prune` | 不变 | 删除 `<none>` |
 
 - 镜像不会随容器停止自动删除：容器只是镜像的运行实例；`stop` / `down` 都不影响镜像。
@@ -299,7 +293,7 @@ curl http://127.0.0.1:9090/actuator/health   # Gateway
 方案 B 额外检查：
 
 ```bash
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml ps
 ```
 

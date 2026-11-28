@@ -45,7 +45,7 @@
   （生产兜底取到开发哑密钥会拒绝启动）。加密工具见根 README「配置约定」。
 - **日志目录**：默认 `<工作目录>/logs`（Docker 内挂载到仓库根 `logs/`）。
 - **容器资源**：`APP_UID`/`APP_GID`（默认 1000:1000，对齐宿主机权限）、`APP_MEM_LIMIT`（默认 1g）、
-  `BASE_IMAGE`（可覆盖为国内镜像源）——这是 `.env` 仅剩的编排参数。
+  `BASE_IMAGE`（可覆盖为国内镜像源）——compose 内置默认值，需要覆盖时用 shell 环境变量。
 - **Nacos 配置分层**：每服务导入「公共配置（ATIFAH_PUBLIC_GROUP）+ 服务私有配置
   （ATIFAH_<SERVICE>_GROUP）」，支持动态刷新（`refreshEnabled=true`，Nacos 侧 `ENC()` 值刷新后
   自动重放解密）；启动时装配的日志文件/格式与网关鉴权配置需重启，详见 [nacos/README.md](nacos/README.md)。
@@ -53,7 +53,7 @@
   `8081–8090` 是容器内部端口，不映射到宿主机。禁止通过临时端口映射把内部服务暴露到生产网络。
 - **网关鉴权**：`atifah.gateway.auth.enabled` 默认 `true`（Nacos 网关私有配置覆盖），
   生产禁止关闭；管理端密钥以 `ENC()` 密文经 Nacos 网关私有配置下发。
-- 密钥类文件（`.env`）已被 `.gitignore` 忽略，禁止提交。
+- 本地环境文件（`.env`，如临时创建）已被 `.gitignore` 忽略，禁止提交。
 
 ## 快速开始
 

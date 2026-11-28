@@ -478,31 +478,28 @@ Volumes：`mysql-data` / `redis-data` / `rocketmq-store`；网络 `atifah-net`�
 ### 10.2 快速开始（核心步骤，完整手册见 [deploy/dev-deploy.md](../deploy/dev-deploy.md)）
 
 ```bash
-# 1. 创建本地环境文件（Nacos 3 强制 AUTH_TOKEN，32 字节以上）
-cd deploy/docker-compose && cp .env.example .env   # 填写 NACOS_AUTH_TOKEN
+# 1. 拉起中间件（MySQL/Redis/Nacos/RocketMQ；控制台加 --profile ops。
+#    Nacos AUTH_TOKEN 已内置本地哑值，仅满足启动校验，无需本地环境文件）
+docker compose -f deploy/docker-compose/docker-compose.yml up -d
 
-# 2. 拉起中间件（MySQL/Redis/Nacos/RocketMQ；控制台加 --profile ops）
-docker compose -f docker-compose.yml up -d
-cd ../..
-
-# 3. 向 Nacos 发布公共配置（namespace atifah_dev，Data ID common-application.yaml，
+# 2. 向 Nacos 发布公共配置（namespace atifah_dev，Data ID common-application.yaml，
 #    Group ATIFAH_PUBLIC_GROUP）——控制台 http://localhost:8849 导入；
 #    未发布则所有业务服务被 NacosCommonConfigGuard 拒绝启动
 
-# 4. 构建后端
+# 3. 构建后端
 mvn clean package -DskipTests
 
-# 5. 启动（方案 A：JVM，推荐日常开发；本地直跑无需参数，默认连接 atifah_dev）
+# 4. 启动（方案 A：JVM，推荐日常开发；本地直跑无需参数，默认连接 atifah_dev）
 java -jar atifah-gateway/target/atifah-gateway-1.0.0-SNAPSHOT.jar
 java -jar atifah-services/auth-service/target/auth-service-1.0.0-SNAPSHOT.jar
 #    方案 B：Docker（11 个后端容器，以 container + local profile 启动）
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml up -d --build
 
-# 6. 管理后台前端
+# 5. 管理后台前端
 cd atifah-admin-web/frontend && npm install && npm run dev   # http://localhost:5173
 
-# 7. 验证
+# 6. 验证
 curl http://127.0.0.1:9090/actuator/health   # Gateway 管理端口，仅宿主机回环可访问
 ```
 
@@ -525,7 +522,7 @@ curl http://127.0.0.1:9090/actuator/health   # Gateway 管理端口，仅宿主�
 | `atifah.security.jwt.usage=SIGNER` / `private-key-location` | auth-service JWT 签发；生产只配置私钥文件路径 |
 | `atifah.gateway.auth.*` | 网关鉴权开关/白名单/黑名单开关与故障策略 |
 | `logging.structured.format.*: logstash` | 生产 JSON 日志（Nacos 覆盖下发） |
-| `APP_UID` / `APP_GID` / `APP_MEM_LIMIT` / `BASE_IMAGE` | 容器编排资源参数（compose `.env`，非应用配置） |
+| `APP_UID` / `APP_GID` / `APP_MEM_LIMIT` / `BASE_IMAGE` | 容器编排资源参数（compose 内置默认值，shell 环境变量覆盖；非应用配置） |
 
 ### 10.4 Nacos 配置资产（deploy/nacos/config/）
 

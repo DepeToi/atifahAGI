@@ -322,17 +322,11 @@ do_size() {
   echo "size 通过"
 }
 
-# ---------- compose：配置语法校验（CI 无本地 .env 时用一次性哑变量，不启动容器） ----------
+# ---------- compose：配置语法校验（本地存在 .env 时一并带上；不启动容器） ----------
 do_compose() {
   local env_args=() f
   if [ -f deploy/docker-compose/.env ]; then
     env_args=(--env-file deploy/docker-compose/.env)
-  else
-    cat > "$workdir/compose.env" <<'EOF'
-# 仅用于 config 语法校验的哑变量（非真实密钥，不用于启动容器）
-NACOS_AUTH_TOKEN=dummy-token
-EOF
-    env_args=(--env-file "$workdir/compose.env")
   fi
   for f in deploy/docker-compose/docker-compose.yml deploy/docker-compose/docker-compose.app.yml; do
     if [ ! -f "$f" ]; then echo "WARN: 缺少 $f，跳过"; continue; fi

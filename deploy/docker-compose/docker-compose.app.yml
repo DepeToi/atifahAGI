@@ -8,12 +8,10 @@
 #   2. Nacos 已发布 common-application.yaml（否则业务服务拒绝启动）；
 #   3. 仓库根目录已执行 mvn clean package -DskipTests，各模块 target/ 下有可执行 jar。
 #
-# 全部启动：docker compose --env-file deploy/docker-compose/.env \
-#   -f deploy/docker-compose/docker-compose.app.yml up -d --build
-#   （.env 现仅承载基础镜像/容器资源等可选编排参数，缺失时使用默认值，也可省略 --env-file）
+# 全部启动：docker compose -f deploy/docker-compose/docker-compose.app.yml up -d --build
+#   （BASE_IMAGE / APP_MEM_LIMIT / APP_UID / APP_GID 有内置默认值，需要覆盖时用 shell 环境变量）
 # 按需启动：在全部启动命令的 up 后指定 gateway auth-service
-# 停止清理：docker compose --env-file deploy/docker-compose/.env \
-#   -f deploy/docker-compose/docker-compose.app.yml down
+# 停止清理：docker compose -f deploy/docker-compose/docker-compose.app.yml down
 #
 # P0 网络安全边界：仅 gateway 发布宿主机端口，其余服务只在 atifah-net 内可达。
 # 本地临时排障如需直连业务服务，请使用 127.0.0.1 绑定的临时 override 文件，

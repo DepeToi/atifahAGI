@@ -149,35 +149,29 @@ compose profile 与部署编排参数见 [deploy/README.md](deploy/README.md)；
 完整的 Windows 11 本地部署手册见 [deploy/dev-deploy.md](deploy/dev-deploy.md)，核心步骤：
 
 ```bash
-# 1. 创建本地环境文件（Nacos 3 强制要求 AUTH_TOKEN；.env 已被 .gitignore 忽略）
-cd deploy/docker-compose
-cp .env.example .env
-#    填写 NACOS_AUTH_TOKEN（32 字节以上，可用 openssl rand -base64 32 生成）
-#    PowerShell 建议：Set-Content -Encoding ascii .env 'NACOS_AUTH_TOKEN=<32 位以上随机字符串>'
-
-# 2. 拉起中间件（MySQL/Redis/Nacos/RocketMQ）
-docker compose -f docker-compose.yml up -d
+# 1. 拉起中间件（MySQL/Redis/Nacos/RocketMQ；Nacos 3 强制要求的 AUTH_TOKEN 已内置
+#    本地哑值，仅满足启动校验，无需本地环境文件；需要覆盖时用 shell 环境变量注入）
+docker compose -f deploy/docker-compose/docker-compose.yml up -d
 #    需要控制台时再追加：docker compose --profile ops up -d
-cd ../..
 
-# 3. 向 Nacos 发布公共配置（namespace atifah_dev，Data ID common-application.yaml，
+# 2. 向 Nacos 发布公共配置（namespace atifah_dev，Data ID common-application.yaml，
 #    Group ATIFAH_PUBLIC_GROUP）——控制台 http://localhost:8849 导入，
 #    或按 deploy/nacos/README.md 的运维 API 导入。未发布则业务服务拒绝启动。
 
-# 4. 构建后端
+# 3. 构建后端
 mvn clean package -DskipTests
 
-# 5. 启动后端（方案 A：JVM，推荐日常开发；本地直跑无需任何参数，默认连接 atifah_dev）
+# 4. 启动后端（方案 A：JVM，推荐日常开发；本地直跑无需任何参数，默认连接 atifah_dev）
 java -jar atifah-gateway/target/atifah-gateway-1.0.0-SNAPSHOT.jar
 java -jar atifah-services/auth-service/target/auth-service-1.0.0-SNAPSHOT.jar
 #    或方案 B：Docker（11 个后端容器以 container + local profile 启动，只有 gateway 发布业务端口，不能与方案 A 同时运行）
-docker compose --env-file deploy/docker-compose/.env \
+docker compose \
   -f deploy/docker-compose/docker-compose.app.yml up -d --build
 
-# 6. 启动管理后台前端
+# 5. 启动管理后台前端
 cd atifah-admin-web/frontend && npm install && npm run dev   # http://localhost:5173
 
-# 7. 验证
+# 6. 验证
 curl http://127.0.0.1:9090/actuator/health  # Gateway 管理端点，仅宿主机回环可访问
 ```
 
@@ -240,9 +234,9 @@ curl http://127.0.0.1:9090/actuator/health  # Gateway 管理端点，仅宿主�
 - **Nacos 配置分层**：每服务导入「公共配置（ATIFAH_PUBLIC_GROUP）+ 服务私有配置（ATIFAH_<SERVICE>_GROUP）」，
   支持动态刷新（`refreshEnabled=true`，Nacos 侧 `ENC()` 值刷新后自动重放解密）；
   启动时装配的日志文件/格式与网关鉴权配置需重启，详见 [deploy/nacos/README.md](deploy/nacos/README.md)。
-- **部署相关变量**：仅容器编排资源（`APP_UID` / `APP_GID` / `APP_MEM_LIMIT` / `BASE_IMAGE`）
-  走 compose `.env`，见 [deploy/README.md](deploy/README.md#部署相关配置)。
-- 密钥类文件（`.env`、私钥/证书）已被 `.gitignore` 忽略，禁止提交。
+- **部署相关变量**：仅容器编排资源（`APP_UID` / `APP_GID` / `APP_MEM_LIMIT` / `BASE_IMAGE`），
+  compose 内置默认值，需要覆盖时用 shell 环境变量，见 [deploy/README.md](deploy/README.md#部署相关配置)。
+- 本地环境文件（`.env`）、私钥/证书已被 `.gitignore` 忽略，禁止提交。
 
 ## 安全与合规基线
 
@@ -252,7 +246,7 @@ curl http://127.0.0.1:9090/actuator/health  # Gateway 管理端点，仅宿主�
 - **日志红线**：日志、异常、MQ 消息与 URL 不得出现情绪正文、量表结果、手机号、密码或 Token 明文；访问日志只记录方法、路径、状态码、耗时、用户 ID 与 IP。
 - **密钥管理**：配置密钥以 `ENC()` 密文入库、启动时统一解密；主密钥随配置走 Nacos 优先 +
   本地 yaml 兜底（仓库仅开发哑值），Nacos 引导凭据只走启动参数；
-  `.env`、证书与私钥文件不得提交。
+  本地环境文件（`.env`）、证书与私钥文件不得提交。
 - **访问路径**：唯一入口是网关（生产外部再经 Nginx 接入层）；管理端不直连业务库，服务之间不跨库 JOIN，也不绕过网关直连业务服务。
 
 ## 构建与 CI

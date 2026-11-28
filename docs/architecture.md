@@ -292,8 +292,8 @@ Topic 与消费组必须先登记 `MqTopics` / `MqConsumerGroups` 再引用；�
 - 启动中间件：`docker compose -f deploy/docker-compose/docker-compose.yml up -d`；控制台组件用 `--profile ops` 追加。
 - `auth-service` 首次启动由 Flyway 自动建表（`src/main/resources/db/migration`），无需手工执行 DDL；新服务沿用同一约定。
 - 方案 A：`mvn clean package -DskipTests` 后 IDE 运行或 `java -jar` 启动网关与业务服务。
-- 方案 B：同样先构建 jar，再通过 `--env-file deploy/docker-compose/.env` 和
-  `-f deploy/docker-compose/docker-compose.app.yml` 启动；运行环境由 Nacos namespace 区分，容器镜像已内置 `container` profile；
+- 方案 B：同样先构建 jar，再通过 `-f deploy/docker-compose/docker-compose.app.yml` 启动；
+  运行环境由 Nacos namespace 区分，容器镜像已内置 `container` profile；
   镜像由各模块目录下的 `Dockerfile` 从本模块 `target/*.jar` 构建，容器经 `atifah-net` 访问中间件。
   只有 gateway 发布 `8080`，管理端点 `9090` 仅绑定宿主机回环；业务容器端口不得发布到宿主机；
   单服务独立部署用各模块自己的 `docker-compose.yml`，统一 compose 复用同一批 Dockerfile。

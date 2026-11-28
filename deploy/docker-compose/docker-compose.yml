@@ -65,8 +65,11 @@ services:
       # 本地为全新 MySQL 库，无 2.x 遗留数据，无需迁移
       NACOS_CONFIG_NAMESPACE_COMPATIBLE_MODE: "false"
       NACOS_AUTH_ENABLE: "false"
-      # Nacos 3.x 启动脚本强制校验：必须提供 base64 且解码后 >=32 字节的 token（本地开发值）
-      NACOS_AUTH_TOKEN: "${NACOS_AUTH_TOKEN:?NACOS_AUTH_TOKEN 未设置，见 deploy/docker-compose/.env.example}"
+      # Nacos 3.x 启动脚本强制校验：必须提供 base64 且解码后 >=32 字节的 token。
+      # 本地固定哑值（明文 ci-dummy-nacos-token-for-syntax-check-0123456789，gitleaks 放行；
+      # 本地 AUTH_ENABLE=false，token 仅满足启动校验），需要覆盖时用 shell 环境变量注入；
+      # 生产由生产部署资产注入真实 token，禁止沿用本哑值
+      NACOS_AUTH_TOKEN: "${NACOS_AUTH_TOKEN:-Y2ktZHVtbXktbmFjb3MtdG9rZW4tZm9yLXN5bnRheC1jaGVjay0wMTIzNDU2Nzg5}"
       NACOS_AUTH_IDENTITY_KEY: "atifah-server-identity"
       NACOS_AUTH_IDENTITY_VALUE: "atifah-server-identity-value"
       # 本地开发：关闭 Nacos 3 运维 API 鉴权，便于脚本导入配置（生产必须开启）
