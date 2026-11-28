@@ -1,8 +1,9 @@
 # 生产环境部署说明（Docker）
 
 本文档给出生产环境的 Docker 部署基线。**只使用 Docker**，不使用 JVM 直跑。
-仓库不包含生产编排清单与云资源，具体 K8s / ECS / Compose 资产由部署方维护
-（见 [architecture.md](../docs/architecture.md)）；本文的配置、参数与检查项与部署平台无关。
+仓库提供启动参数基线模板 [compose-template.yml](prod/compose-template.yml)
+（`container,prod` + RS256 密钥挂载 + 占位变量防呆），实际编排清单与云资源仍由部署方
+维护（见 [architecture.md](../docs/architecture.md)）；本文的配置、参数与检查项与部署平台无关。
 
 | 项 | 值 |
 | --- | --- |
@@ -82,6 +83,8 @@ docker push <registry>/atifah/<service>:<version>
 
 - 镜像只打包构建产物，禁止在容器内执行 Maven。
 - 发布前完成镜像漏洞扫描；同一版本只构建一次，测试与生产使用同一镜像。
+- 镜像发布可走 GitHub Actions **Release**（`.github/workflows/release.yml`，手动触发推送 GHCR），
+  自建 Registry 按本节命令手动构建推送。
 
 ## 6. Docker 部署
 

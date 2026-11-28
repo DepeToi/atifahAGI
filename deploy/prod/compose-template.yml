@@ -1,0 +1,133 @@
+# 生产环境后端编排模板（Docker；基线手册见 deploy/prod-deploy.md）。
+#
+# ⚠️ 本文件是启动参数基线的示意模板：生产编排清单与云资源由部署方维护
+#    （K8s / ECS / Compose 皆可，prod-deploy.md 开篇约定）。资源限额、副本数、
+#    探针参数、日志采集按压测结果与平台规范补充；此处仅固化与平台无关的
+#    启动参数与安全边界。
+#
+# 与测试模板（deploy/test/docker-compose.yml）的差异：
+#   1. profile 为 container,prod：触发生产护栏——强制 RS256、CORS 收敛、
+#      拒绝仓库哑主密钥、管理端强密钥；仅带 container 按 fail-closed 拒绝启动；
+#   2. Nacos 必须开启鉴权，客户端引导凭据只经启动参数注入（compose 变量替换
+#      在 up 时取自运行环境/secret manager，不落盘、不入镜像）；
+#   3. JWT RS256 密钥为部署机文件（权限 600），经只读卷挂载进容器，
+#      Nacos 网关私有配置只存容器内路径；
+#   4. 不发布数据库/中间件编排——生产中间件独立部署（prod-deploy.md §2）。
+#
+# 使用示例（占位变量全部必填，缺失即拒绝启动，防呆优先）：
+#   export REGISTRY=ghcr.io/<owner>
+#   export APP_VERSION=<版本化 tag，禁止 latest>
+#   export NACOS_ADDR=<nacos-host>:8848
+#   export NACOS_NAMESPACE=atifah_prod
+#   export NACOS_USERNAME=<引导用户>
+#   export NACOS_PASSWORD=<引导口令>
+#   export JWT_PUBLIC_KEY=/secure/keys/jwt-public.pem      # 网关公钥（宿主机路径）
+#   export JWT_PRIVATE_KEY=/secure/keys/jwt-private.pem    # auth-service 私钥（宿主机路径）
+#   docker compose -f deploy/prod/compose-template.yml up -d
+name: atifah-prod
+
+x-app-common: &app-common
+  command:
+    - "--spring.profiles.active=container,prod"
+    - "--spring.cloud.nacos.discovery.server-addr=${NACOS_ADDR:?未设置 NACOS_ADDR}"
+    - "--spring.cloud.nacos.config.server-addr=${NACOS_ADDR:?未设置 NACOS_ADDR}"
+    - "--spring.cloud.nacos.discovery.namespace=${NACOS_NAMESPACE:?未设置 NACOS_NAMESPACE}"
+    - "--spring.cloud.nacos.config.namespace=${NACOS_NAMESPACE:?未设置 NACOS_NAMESPACE}"
+    - "--spring.cloud.nacos.discovery.username=${NACOS_USERNAME:?未设置 NACOS 引导凭据}"
+    - "--spring.cloud.nacos.discovery.password=${NACOS_PASSWORD:?未设置 NACOS 引导凭据}"
+    - "--spring.cloud.nacos.config.username=${NACOS_USERNAME:?未设置 NACOS 引导凭据}"
+    - "--spring.cloud.nacos.config.password=${NACOS_PASSWORD:?未设置 NACOS 引导凭据}"
+  restart: unless-stopped
+  mem_limit: ${APP_MEM_LIMIT:-1g}
+  networks:
+    - atifah-net
+
+services:
+  gateway:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/gateway:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-gateway
+    ports:
+      - "8080:8080"
+      # 管理端点仅回环或受控运维网络（prod-deploy.md §7），禁止发布到公网
+      - "127.0.0.1:9090:9090"
+    volumes:
+      # RS256 公钥只读挂载；Nacos 网关私有配置 public-key-location 指向容器内路径
+      - ${JWT_PUBLIC_KEY:?未设置网关 RS256 公钥路径}:/app/config/jwt-public.pem:ro
+
+  auth-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/auth-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-auth
+    expose:
+      - "8081"
+    volumes:
+      # RS256 私钥只读挂载（仅 auth-service 持有）；Nacos 配置 private-key-location 指向容器内路径
+      - ${JWT_PRIVATE_KEY:?未设置 auth-service RS256 私钥路径}:/app/config/jwt-private.pem:ro
+
+  user-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/user-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-user
+    expose:
+      - "8082"
+
+  mood-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/mood-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-mood
+    expose:
+      - "8083"
+
+  analysis-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/analysis-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-analysis
+    expose:
+      - "8084"
+
+  community-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/community-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-community
+    expose:
+      - "8085"
+
+  content-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/content-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-content
+    expose:
+      - "8086"
+
+  message-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/message-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-message
+    expose:
+      - "8087"
+
+  growth-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/growth-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-growth
+    expose:
+      - "8088"
+
+  stats-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/stats-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-stats
+    expose:
+      - "8089"
+
+  admin-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/admin-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-admin
+    expose:
+      - "8090"
+
+networks:
+  atifah-net:
+    external: true

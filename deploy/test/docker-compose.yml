@@ -1,0 +1,126 @@
+# 测试/沙箱环境后端编排模板（Docker，操作手册见 deploy/test-deploy.md）。
+# 本地开发编排见 deploy/docker-compose/；生产模板见 deploy/prod/compose-template.yml。
+#
+# 与本地 docker-compose.app.yml 的差异：
+#   1. 镜像来自 Registry（CI 或构建机构建推送，见 test-deploy.md §4），不在部署机 build；
+#   2. profile 为 container,dev（dev 走非生产语义；仅带 container 会被安全护栏拒绝启动）；
+#   3. Nacos 指向测试环境独立实例与 namespace（命令行参数覆盖 application-container.yaml
+#      里的本地沙箱地址）；中间件连接地址经测试 namespace 的公共配置覆盖下发。
+#
+# 前置条件（test-deploy.md §1-§4）：
+#   1. 独立中间件就绪（MySQL/Redis/Nacos/RocketMQ，部署资产维护，不使用仓库本地编排）；
+#   2. Nacos namespace（如 atifah_test）已发布 common-application.yaml 与 atifah-gateway.yaml；
+#   3. 镜像已推送 Registry（release.yml 或手动 docker build/push）；
+#   4. 外部网络已创建：docker network create atifah-net（或由部署资产提供）。
+#
+# 使用示例：
+#   export REGISTRY=ghcr.io/<owner>
+#   export APP_VERSION=1.0.0
+#   export NACOS_ADDR=<nacos-host>:8848
+#   export NACOS_NAMESPACE=atifah_test
+#   docker compose -f deploy/test/docker-compose.yml up -d
+#
+# 启动顺序：auth-service → 其他业务服务 → gateway → admin-service（compose 会按
+# depends_on 等待健康，也可分批 up）。前端产物由 Nginx 托管，不经本文件编排。
+name: atifah-test
+
+x-app-common: &app-common
+  command:
+    - "--spring.profiles.active=container,dev"
+    - "--spring.cloud.nacos.discovery.server-addr=${NACOS_ADDR:?未设置 NACOS_ADDR}"
+    - "--spring.cloud.nacos.config.server-addr=${NACOS_ADDR:?未设置 NACOS_ADDR}"
+    - "--spring.cloud.nacos.discovery.namespace=${NACOS_NAMESPACE:?未设置 NACOS_NAMESPACE}"
+    - "--spring.cloud.nacos.config.namespace=${NACOS_NAMESPACE:?未设置 NACOS_NAMESPACE}"
+    # Nacos 开启鉴权时追加（凭据由部署资产运行时提供，禁止写入本文件）：
+    # - "--spring.cloud.nacos.discovery.username=${NACOS_USERNAME}"
+    # - "--spring.cloud.nacos.discovery.password=${NACOS_PASSWORD}"
+    # - "--spring.cloud.nacos.config.username=${NACOS_USERNAME}"
+    # - "--spring.cloud.nacos.config.password=${NACOS_PASSWORD}"
+  restart: unless-stopped
+  mem_limit: ${APP_MEM_LIMIT:-1g}
+  networks:
+    - atifah-net
+
+services:
+  gateway:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/gateway:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-gateway
+    ports:
+      - "8080:8080"
+      # 管理端点仅绑定宿主机回环（test-deploy.md：9090 仅内网/运维可达）
+      - "127.0.0.1:9090:9090"
+
+  auth-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/auth-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-auth
+    expose:
+      - "8081"
+
+  user-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/user-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-user
+    expose:
+      - "8082"
+
+  mood-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/mood-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-mood
+    expose:
+      - "8083"
+
+  analysis-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/analysis-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-analysis
+    expose:
+      - "8084"
+
+  community-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/community-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-community
+    expose:
+      - "8085"
+
+  content-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/content-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-content
+    expose:
+      - "8086"
+
+  message-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/message-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-message
+    expose:
+      - "8087"
+
+  growth-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/growth-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-growth
+    expose:
+      - "8088"
+
+  stats-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/stats-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-stats
+    expose:
+      - "8089"
+
+  admin-service:
+    <<: *app-common
+    image: ${REGISTRY:?未设置 REGISTRY}/atifah/admin-service:${APP_VERSION:?未设置 APP_VERSION}
+    container_name: atifah-admin
+    expose:
+      - "8090"
+
+networks:
+  atifah-net:
+    external: true

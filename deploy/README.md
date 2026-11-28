@@ -57,5 +57,8 @@
 
 ## 快速开始
 
-完整步骤见 [dev-deploy.md](dev-deploy.md)；测试/沙箱见 [test-deploy.md](test-deploy.md)，
-生产见 [prod-deploy.md](prod-deploy.md)；Nacos 公共配置导入见 [nacos/README.md](nacos/README.md)。
+完整步骤见 [dev-deploy.md](dev-deploy.md)；测试/沙箱见 [test-deploy.md](test-deploy.md)
+（Compose 启动模板 [test/docker-compose.yml](test/docker-compose.yml)），
+生产见 [prod-deploy.md](prod-deploy.md)（参数基线模板 [prod/compose-template.yml](prod/compose-template.yml)）；
+镜像发布见 `.github/workflows/release.yml`（手动触发推送 GHCR）；
+Nacos 公共配置导入见 [nacos/README.md](nacos/README.md)。

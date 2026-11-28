@@ -266,7 +266,7 @@ CI（`.github/workflows/ci.yml`）：
 5. **ops-config**：deploy/** 变更时校验 compose 文件语法；
 6. **secret-scan**：gitleaks 密钥扫描。
 
-本地验证直接用 Maven 与 npm 命令（见 [测试](#测试)）。现有 CI 只做验证与密钥扫描，不构建或推送镜像，也不代表已有生产发布流水线。
+本地验证直接用 Maven 与 npm 命令（见 [测试](#测试)）。`ci.yml` 只做验证与密钥扫描，不构建或推送镜像；镜像发布走独立的 [release.yml](.github/workflows/release.yml)（手动触发，推送 GHCR，见 deploy/prod-deploy.md §5）。
 
 ## 日志规范
 

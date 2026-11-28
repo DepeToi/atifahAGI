@@ -578,7 +578,9 @@ curl http://127.0.0.1:9090/actuator/health   # Gateway 管理端口，仅宿主�
 5. **ops-config**：deploy/** 变更时校验 compose 文件语法。
 6. **secret-scan**：gitleaks 密钥扫描。
 
-CI 只做验证与扫描，不构建/推送镜像（无生产发布流水线）。
+`ci.yml` 只做验证与密钥扫描，不构建/推送镜像；镜像发布走独立的
+[release.yml](../.github/workflows/release.yml)（workflow_dispatch 手动触发，构建 11 个后端镜像并推送 GHCR）。
+测试/生产 Compose 启动模板见 deploy/test/ 与 deploy/prod/（引用 Registry 镜像，参数基线见各部署手册）。
 
 ---
 

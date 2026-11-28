@@ -77,9 +77,16 @@ docker build -t <registry>/atifah/admin-service:<version> atifah-admin-web/backe
 docker push <registry>/atifah/<service>:<version>
 ```
 
+仓库自带 GHCR 发布流水线：GitHub Actions → **Release**（`.github/workflows/release.yml`）手动触发，
+填入版本号即构建并推送 `ghcr.io/<owner>/atifah/<service>:<version>`（凭据为内置 GITHUB_TOKEN，
+无需额外 Secret）。使用自建私有 Registry 时仍按上面手动构建推送。
+
 ## 5. Docker 部署
 
-编排文件由部署资产维护（K8s / ECS / Compose 均可），容器启动参数必须包含：
+编排文件由部署资产维护（K8s / ECS / Compose 均可）。仓库提供 Compose 形态的启动模板
+[docker-compose.yml](test/docker-compose.yml)：镜像引用 `${REGISTRY}/atifah/<service>:${APP_VERSION}`、
+profile `container,dev`、namespace 经占位变量注入，可直接使用或作为部署资产底稿。
+容器启动参数必须包含：
 
 ```bash
 --spring.profiles.active=container,dev

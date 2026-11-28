@@ -1,0 +1,100 @@
+name: Release
+
+# 镜像发布流水线（与 ci.yml 分离：CI 只做验证与密钥扫描，本工作流构建并推送镜像）。
+# 手动触发：Actions → Release → Run workflow，填入版本号（同时作为镜像 tag）。
+# 推送到 GHCR（ghcr.io），凭据使用内置 GITHUB_TOKEN，无需额外配置 Secret；
+# 使用自建私有 Registry 时，把 REGISTRY/IMAGE_PREFIX 换成对应地址并配置登录凭据。
+# 产物与 deploy/test/docker-compose.yml、deploy/prod/compose-template.yml 的镜像引用对应
+# （REGISTRY=<owner 的 ghcr 地址>，镜像路径 ghcr.io/<owner>/atifah/<service>:<version>）。
+# 安全约定：同一版本只构建一次，测试与生产使用同一镜像；禁止推送 latest（prod-deploy.md §1）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '镜像版本 tag（如 1.0.0，禁止 latest）'
+        required: true
+      ref:
+        description: '构建来源分支或 tag（留空 = 当前分支）'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/atifah
+
+jobs:
+  build-push:
+    name: Build & push / JDK 21
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Maven package
+        run: mvn -B -ntp clean package -DskipTests
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 构建上下文为各模块目录（与 docker-compose.app.yml、部署文档一致）；
+      # 逐个 build+push，任一失败即整体失败，避免半版本产物
+      - name: Build and push images
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          services=(
+            "atifah-gateway|gateway"
+            "atifah-services/auth-service|auth-service"
+            "atifah-services/user-service|user-service"
+            "atifah-services/mood-service|mood-service"
+            "atifah-services/analysis-service|analysis-service"
+            "atifah-services/community-service|community-service"
+            "atifah-services/content-service|content-service"
+            "atifah-services/message-service|message-service"
+            "atifah-services/growth-service|growth-service"
+            "atifah-services/stats-service|stats-service"
+            "atifah-admin-web/backend|admin-service"
+          )
+          for entry in "${services[@]}"; do
+            ctx="${entry%%|*}"
+            svc="${entry##*|}"
+            image="${IMAGE_PREFIX}/${svc}:${VERSION}"
+            echo "==> ${image}"
+            docker build -t "${image}" "${ctx}"
+            docker push "${image}"
+          done
+          echo "已推送 ${#services[@]} 个镜像：${IMAGE_PREFIX}/<service>:${VERSION}"
+
+      - name: Summary
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          {
+            echo "### 镜像发布"
+            echo "- 版本：\`${VERSION}\`"
+            echo "- 仓库：\`${IMAGE_PREFIX}/<gateway|auth-service|...|admin-service>\`"
+            echo "- 部署引用：deploy/test/docker-compose.yml（REGISTRY/APP_VERSION）与 deploy/prod/compose-template.yml"
+          } >> "$GITHUB_STEP_SUMMARY"
