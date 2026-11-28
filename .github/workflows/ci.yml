@@ -68,7 +68,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Scope check（变更分类一致性 SCOPE-01/03 · DOC-01 · GIT-07）
+      - name: Scope check（变更分类一致性 SCOPE-01 · GIT-07）
         run: bash .github/scripts/ci-gates.sh scope
 
       - name: Static gates（静态规则 DB-02 · CODE-01/04/08 · ARCH-03/04）

@@ -2,7 +2,8 @@
 # ci-gates.sh — CI 门禁统一入口（ADR-0001 R6；规则依据 docs/review/standards.md §5）
 # 用法：ci-gates.sh <detect|scope|static|task|size|compose>
 #   detect  变更分类：docs_only / deploy_changed 写入 GITHUB_OUTPUT（docs-only PR 跳过构建 job）
-#   scope   PR 类型与路径一致性（SCOPE-01/03、DOC-01、GIT-07）+ Feature 任务包与「允许修改」校验
+#   scope   PR 类型与路径一致性（SCOPE-01、GIT-07）+ Feature 任务包与「允许修改」校验
+#           （SCOPE-03 受保护文件授权与 DOC-01 契约变更流程由 Codex 评审覆盖，本脚本未实现）
 #   static  静态规则，只查 diff 新增行（DB-02、CODE-01/04/08、ARCH-03/04）
 #   task    任务包 front matter 与基线标签（DOC-04 机械部分）
 #   size    生产语义 diff ≤400 行近似统计（SCOPE-02）
@@ -133,7 +134,7 @@ do_scope() {
     local task_list t st task_file allowed pat ok_match
     task_list=$(changed 'docs/tasks/T-*.md')
     if [ -z "$task_list" ]; then
-      echo "[FAIL] SCOPE: Feature PR 必须包含任务包 docs/tasks/T-*.md 的变更（DOC-04）"
+      echo "[FAIL] SCOPE: Feature PR 必须包含任务包 docs/tasks/T-*.md 的变更（SCOPE-01 必需产物）"
       return 1
     fi
     while IFS= read -r t; do
@@ -293,17 +294,22 @@ do_task() {
   fi
 }
 
-# ---------- size：生产语义 diff 体积（SCOPE-02 口径，测试/生成文件/治理文档不计） ----------
+# ---------- size：生产语义 diff 体积（SCOPE-02 口径：生产代码/SQL/配置/契约/规则计入；
+# ---------- 测试、生成文件与其余治理文档不计，docs/contracts 与 docs/rules 全量计入） ----------
 do_size() {
   if ! base_ok; then echo "WARN: base ref 不存在，跳过 size"; return 0; fi
-  local total
-  total=$(git diff --numstat "${BASE_REF}...HEAD" -- \
+  local code_total doc_total total
+  code_total=$(git diff --numstat "${BASE_REF}...HEAD" -- \
     pom.xml atifah-common atifah-gateway atifah-services atifah-admin-web/backend \
-    atifah-admin-web/frontend/src atifah-app docs/contracts deploy \
+    atifah-admin-web/frontend/src atifah-app deploy \
     ':(exclude)**/src/test/**' ':(exclude)**/node_modules/**' ':(exclude)**/dist/**' \
     ':(exclude)**/target/**' ':(exclude)**/__tests__/**' ':(exclude)**/*.test.ts' \
     ':(exclude)**/*.spec.ts' ':(exclude)**/*.md' \
     | awk '$1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { add += $1; del += $2 } END { print add + del }')
+  # 契约与规则按 SCOPE-02 全量计入（不能用 :(exclude) 排除 .md 后再放行：exclude 恒优先）
+  doc_total=$(git diff --numstat "${BASE_REF}...HEAD" -- docs/contracts docs/rules \
+    | awk '$1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { add += $1; del += $2 } END { print add + del }')
+  total=$((code_total + doc_total))
   if [ -z "$total" ] || [ "$total" -eq 0 ]; then
     echo "INFO: 无生产语义变更（docs-only 或空 diff），跳过体积门禁"
     return 0
