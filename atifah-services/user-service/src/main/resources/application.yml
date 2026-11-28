@@ -1,0 +1,49 @@
+server:
+  port: 8082
+  shutdown: graceful
+
+spring:
+  application:
+    name: atifah-user
+  config:
+    import:
+      - "nacos:common-application.yaml?group=ATIFAH_PUBLIC_GROUP&refreshEnabled=true"
+      - "optional:nacos:${spring.application.name}.yaml?group=ATIFAH_USER_GROUP&refreshEnabled=true"
+  cloud:
+    # 连接 Nacos 所需的参数必须留在本地文件（导入 Nacos 本身依赖它们）；环境由 Nacos
+    # namespace 区分：容器地址差异由 application-container.yaml 承载，生产 namespace/账号经部署资产注入
+    nacos:
+      server-addr: 127.0.0.1:8848
+      discovery:
+        server-addr: 127.0.0.1:8848
+        namespace: atifah_dev
+        group: atifah_GROUP
+        # 生产开启 Nacos 鉴权后经启动参数注入专用账号，禁止把账号明文入库
+        username: ""
+        password: ""
+      config:
+        server-addr: 127.0.0.1:8848
+        namespace: atifah_dev
+        group: ATIFAH_USER_GROUP
+        file-extension: yaml
+        username: ""
+        password: ""
+  datasource:
+    url: "jdbc:mysql://127.0.0.1:3306/atifah_user?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+    username: root
+    # 库口令以仓库开发哑主密钥加密入库（SecretTool 生成）；生产由 Nacos 生产命名空间下发密文覆盖
+    password: ENC(AZs4ZW/p7JThWrJxoV/640aIljpHpyP/lN7PqqzFic5H)
+
+rocketmq:
+  producer:
+    group: atifah-user-producer
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+atifah:
+  crypto:
+    # 主密钥（仓库开发哑值）：用于解密 ENC() 配置密文；Nacos 公共配置同名键优先。
+    # 生产环境由 Nacos 生产命名空间（如 atifah_prod）下发真实主密钥覆盖；
+    # 生产若兜底取到本哑值将拒绝启动（明文守卫防呆）。
+    master-key: Vct5lyW9M9uW9GltsCt7V41lWIzO6JNugYRTVMw1Li0=

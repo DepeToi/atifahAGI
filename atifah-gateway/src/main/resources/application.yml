@@ -1,0 +1,224 @@
+server:
+  port: 8080
+  shutdown: graceful
+  http2:
+    enabled: true
+  # 请求头大小上限（默认值显式化，便于运维核对）
+  max-http-request-header-size: 16KB
+
+spring:
+  application:
+    name: atifah-gateway
+  main:
+    web-application-type: reactive
+  # jti 黑名单查询使用响应式 Lettuce；网关不导入公共 Nacos 配置，连接参数在此回落
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      # Redis 未开鉴权时留空；开启后密钥以 ENC() 密文入库（SecretTool 生成）
+      password: ""
+      database: 0
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  config:
+    import: "optional:nacos:${spring.application.name}.yaml?group=ATIFAH_GATEWAY_GROUP&refreshEnabled=true"
+  cloud:
+    # 连接 Nacos 所需的参数必须留在本地文件（导入 Nacos 本身依赖它们）；环境由 Nacos
+    # namespace 区分：容器地址差异由 application-container.yaml 承载，生产 namespace/账号经部署资产注入
+    nacos:
+      server-addr: 127.0.0.1:8848
+      discovery:
+        server-addr: 127.0.0.1:8848
+        namespace: atifah_dev
+        group: atifah_GROUP
+        # 生产开启 Nacos 鉴权后经启动参数注入专用账号，禁止把账号明文入库
+        username: ""
+        password: ""
+      config:
+        server-addr: 127.0.0.1:8848
+        namespace: atifah_dev
+        group: ATIFAH_GATEWAY_GROUP
+        file-extension: yaml
+        username: ""
+        password: ""
+    # 排除 Windows 开发机虚拟网卡，避免 Nacos 注册到 172.x 虚拟 IP。
+    # 注意：spring-cloud-commons 按 Java NetworkInterface.getDisplayName()（即驱动描述，
+    # 如 "Hyper-V Virtual Ethernet Adapter"）全串正则匹配，不是控制台里的 "vEthernet (...)" 友好名；
+    # Linux 生产环境无匹配接口，配置无害
+    inetutils:
+      ignored-interfaces:
+        - 'Hyper-V Virtual.*'
+        - 'VMware.*'
+        - 'VirtualBox.*'
+    # 网关配置 key 命名空间为 spring.cloud.gateway.server.webflux.*（SCG 4.3 起拆分 webflux/webmvc
+    # 双变体，经典 spring.cloud.gateway.* key 已弃用）；新增路由在此追加
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
+          routes:
+            - id: atifah-auth
+              uri: lb://atifah-auth
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: atifah-user
+              uri: lb://atifah-user
+              predicates:
+                - Path=/api/v1/users/**
+            - id: atifah-mood
+              uri: lb://atifah-mood
+              predicates:
+                - Path=/api/v1/moods/**
+            - id: atifah-analysis
+              uri: lb://atifah-analysis
+              predicates:
+                - Path=/api/v1/analysis/**
+            - id: atifah-community
+              uri: lb://atifah-community
+              predicates:
+                - Path=/api/v1/community/**
+            - id: atifah-content
+              uri: lb://atifah-content
+              predicates:
+                - Path=/api/v1/contents/**
+            - id: atifah-message
+              uri: lb://atifah-message
+              predicates:
+                - Path=/api/v1/messages/**
+            - id: atifah-message-websocket
+              uri: lb:ws://atifah-message
+              predicates:
+                - Path=/ws/**
+            - id: atifah-growth
+              uri: lb://atifah-growth
+              predicates:
+                - Path=/api/v1/growth/**
+            - id: atifah-stats
+              uri: lb://atifah-stats
+              predicates:
+                - Path=/api/v1/stats/**
+            - id: atifah-admin
+              uri: lb://atifah-admin
+              predicates:
+                - Path=/admin/api/**
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                # 本地默认通配；生产必须经 Nacos 网关私有配置收敛为具体域名
+                # （不使用 Cookie 凭据，故 allow-credentials 关闭，避免与通配源组合产生安全风险）
+                allowed-origin-patterns: '*'
+                allowed-methods: "*"
+                allowed-headers: "*"
+                exposed-headers: X-Trace-Id
+                allow-credentials: false
+                max-age: 3600
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:8858
+      eager: true
+
+management:
+  # 管理端点与业务入口分离。9090 仅由运维/监控通过受控网络访问，
+  # Compose 只把该端口绑定到宿主机回环地址，禁止随 8080 一起暴露到公网。
+  server:
+    port: 9090
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+atifah:
+  crypto:
+    # 主密钥（仓库开发哑值）：用于解密 ENC() 配置密钥密文；网关不导入公共 Nacos 配置，
+    # 生产环境的主密钥经 Nacos 生产命名空间的网关私有配置（atifah-gateway.yaml）下发；
+    # 生产若兜底取到本哑值将拒绝启动（明文守卫防呆）。
+    master-key: Vct5lyW9M9uW9GltsCt7V41lWIzO6JNugYRTVMw1Li0=
+  gateway:
+    auth:
+      # P0 安全基线：鉴权默认开启。只有隔离的本地排障环境才可经 Nacos 网关私有配置
+      # 覆盖为 false；生产环境禁止关闭。
+      enabled: true
+      # 免鉴权规则：路径模式 + HTTP 方法；空白名单表示拒绝所有（fail-closed）
+      # 仅对 C 端 /api/v1/** 生效；actuator 独立运行在 9090 管理端口，不经网关业务链路
+      rules:
+        - path: /api/v1/auth/**
+          methods:
+            - POST
+      blacklist:
+        enabled: true
+        timeout: 300ms
+        fail-open: true
+    # 管理端使用独立 JWT 密钥与白名单，不复用 C 端令牌。
+    # 默认空规则表示拒绝所有管理接口；管理端登录接入后再显式添加白名单。
+    admin-auth:
+      # 密钥以 ENC() 密文入库（仓库开发哑主密钥加密的哑值）；生产由 Nacos 网关私有配置
+      # 下发真实密钥密文覆盖，解密后必须 ≥32 字节且不得沿用默认占位值
+      secret: ENC(ASB1o8Z22B+cw1aJumMs3JxGMNVJbq2mamGfMITyi6rNyO/5fQezUT6by2o/FFWK4tTnmybc7/3VtyH/9r+Bhjb5dQXQBw==)
+      issuer: atifah-admin
+      rules: []
+  security:
+    jwt:
+      # 本地 HS256（密钥以 ENC() 密文入库）；生产切换 RS256 时经 Nacos 网关私有配置覆盖为
+      # algorithm: RS256 与 public-key-location（X.509 公钥文件放部署机，路径不入密文）
+      algorithm: HS256
+      # 仅网关等实际验签/签发服务装配 JWT Provider；普通业务服务不加载 JWT 密钥。
+      provider-enabled: true
+      usage: VERIFIER
+      secret: ENC(AV7VRqetI7V4AYOpHneexTwGoYwlclPOZkZOa/Oq6MYfSW67gtSYMylOCMcqj9EOnsqk6FOjAPKsrxSRgghNVWQtwKrs2oU=)
+      public-key-location: ""
+      issuer: atifah
+      access-token-ttl: 15m
+  logging:
+    access:
+      enabled: true
+      ignore-paths:
+        - /actuator/
+      log-client-ip: true
+      sample-rate: 1.0
+    async:
+      enabled: true
+      queue-size: 4096
+
+logging:
+  file:
+    # 控制台之外同时写文件；网关不导入公共 Nacos 配置，故在此单独声明
+    # 相对路径基于工作目录：JVM 从仓库根启动 → <repo>/logs；Docker 中 WORKDIR=/app → /app/logs
+    name: logs/${spring.application.name}.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{traceId:-}] [%t] %logger{40} - %msg%n"
+    # 与 console 保持同格式；Boot 默认 file pattern 会额外带 PID 和 ---
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{traceId:-}] [%t] %logger{40} - %msg%n"
+  structured:
+    # 留空走文本 pattern；生产经 Nacos 配置设置为 logstash 启用 JSON
+    format:
+      console: ""
+      # 与 console 共用开关，避免控制台 JSON、文件仍是文本
+      file: ""
+    json:
+      context:
+        include: true
+      add:
+        service: ${spring.application.name}
+        env: ${spring.profiles.active:local}
+  logback:
+    rollingpolicy:
+      # 单文件 100MB，按天归档保留 30 个，备份总量上限 5GB
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 5GB
+      clean-history-on-start: false
+  level:
+    root: info
+    org.springframework.cloud.gateway: info
+    reactor.netty: warn
+    com.alibaba.nacos: warn

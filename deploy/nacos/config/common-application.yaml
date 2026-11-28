@@ -1,0 +1,144 @@
+# 业务服务共享配置（Nacos data-id: common-application.yaml, group: ATIFAH_PUBLIC_GROUP）
+# 由各服务通过 spring.config.import 引入。此处仅放各服务完全一致、且与连接 Nacos
+# 本身无关的配置；连接 Nacos 所需的 spring.cloud.nacos.* 与差异化项
+# （端口、应用名、数据源 URL、生产者组）保留在各服务本地 application.yml。
+#
+# 环境差异约定：
+# - 本文件内容面向本地开发（127.0.0.1 直连）；生产在独立命名空间（如 atifah_prod）发布覆盖版，
+#   密钥类（Redis 口令等）在 Nacos 侧同样以 ENC() 密文存放，由 common-security 的
+#   SecretEnvironmentPostProcessor 在装载后统一解密。
+# - 运行环境由 Nacos namespace 区分（本地/沙箱 atifah_dev，生产 namespace 由部署资产指定）；
+#   日志 env 字段取自激活 profile，未激活 profile 的本地直跑按 local 记录。
+
+spring:
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 3000
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      # Redis 未开鉴权时留空；开启后密钥以 ENC() 密文存入本配置（生产命名空间覆盖下发）
+      password: ""
+      database: 0
+      timeout: 3s
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+  cloud:
+    # 排除 Windows 开发机虚拟网卡，避免 Nacos 注册到 172.x 虚拟 IP。
+    # 注意：spring-cloud-commons 按 Java NetworkInterface.getDisplayName()（即驱动描述，
+    # 如 "Hyper-V Virtual Ethernet Adapter"）全串正则匹配，不是控制台里的 "vEthernet (...)" 友好名；
+    # Linux 生产环境无匹配接口，配置无害
+    inetutils:
+      ignored-interfaces:
+        - 'Hyper-V Virtual.*'
+        - 'VMware.*'
+        - 'VirtualBox.*'
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:8858
+      eager: false
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            read-timeout: 5000
+
+mybatis-plus:
+  # 与各服务本地 application.yml 保持同值；Nacos 优先，本地作为回落
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    send-message-timeout: 3000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name:atifah}
+
+atifah:
+  common:
+    # 公共配置装载标记：common-security 的 NacosCommonConfigGuard 据此判断本配置是否真的
+    # 从 Nacos 拉取成功，缺失时服务拒绝启动（防止静默走本地默认值兜底）。
+    config-loaded: true
+  crypto:
+    # 主密钥（仓库开发哑值）：优先于各服务本地 application.yml 的同名兜底值，
+    # 用于解密 ENC() 配置密文（含本配置内的密钥密文）。生产命名空间必须发布真实主密钥
+    # （openssl rand -base64 32 生成），沿用开发哑值会在生产 profile 下拒绝启动。
+    master-key: Vct5lyW9M9uW9GltsCt7V41lWIzO6JNugYRTVMw1Li0=
+  logging:
+    access:
+      enabled: true
+      # 健康检查与错误转发不记录访问日志
+      ignore-paths:
+        - /actuator/
+        - /error
+      # 业务服务在网关之后，remoteIp 通常是网关地址；可按合规要求关闭
+      log-remote-ip: true
+
+logging:
+  file:
+    # 控制台之外同时写文件；文件名带服务名，多服务共用目录也不冲突
+    # 相对路径基于工作目录：JVM 从仓库根启动 → <repo>/logs；Docker 中 WORKDIR=/app → /app/logs
+    name: logs/${spring.application.name}.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{traceId:-}] [%X{userId:-}] [%t] %logger{40} - %msg%n"
+    # 与 console 保持同格式；Boot 默认 file pattern 会额外带 PID 和 ---
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{traceId:-}] [%X{userId:-}] [%t] %logger{40} - %msg%n"
+  structured:
+    # 留空走文本 pattern；生产在本配置（生产命名空间覆盖版）设置为 logstash 启用 JSON
+    format:
+      console: ""
+      # 与 console 共用开关，避免控制台 JSON、文件仍是文本
+      file: ""
+    json:
+      context:
+        include: true
+      add:
+        service: ${spring.application.name}
+        env: ${spring.profiles.active:local}
+  logback:
+    rollingpolicy:
+      # 单文件 100MB，按天归档保留 30 个，备份总量上限 5GB
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 5GB
+      clean-history-on-start: false
+  level:
+    root: info
+    com.atifah: info
+    # 中间件噪声与敏感数据控制：生产禁止 Mapper DEBUG，避免 SQL 参数进入日志
+    com.alibaba.nacos: warn
+    org.redisson: warn
+    org.apache.rocketmq: warn
+    com.alibaba.csp.sentinel: warn
+    io.seata: warn
+    com.zaxxer.hikari: info
+    org.flywaydb: info

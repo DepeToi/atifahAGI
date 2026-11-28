@@ -1,0 +1,22 @@
+# 容器沙箱配置（镜像/命令已激活 container；本地/沙箱必须同时激活 local，生产改为 prod）：
+# 中间件地址使用 compose 服务名；主密钥由本地 application.yml 兜底提供（开发哑值），
+# Nacos 已发布同名键时优先生效。
+# 生产环境：地址与密钥由 Nacos 生产命名空间（如 atifah_prod）的公共/私有配置覆盖下发。
+spring:
+  cloud:
+    nacos:
+      server-addr: nacos:8848
+      discovery:
+        server-addr: nacos:8848
+      config:
+        server-addr: nacos:8848
+    sentinel:
+      transport:
+        dashboard: sentinel-dashboard:8858
+  datasource:
+    url: "jdbc:mysql://mysql:3306/atifah_auth?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
+  data:
+    redis:
+      host: redis
+rocketmq:
+  name-server: rocketmq-namesrv:9876

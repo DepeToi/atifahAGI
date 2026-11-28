@@ -1,0 +1,179 @@
+# 方案 B：把网关与后端服务跑在容器里（方案 A 为 JVM，见 deploy/dev-deploy.md）。
+#
+# 本文件只做批量编排：每个服务使用自己模块目录下的 Dockerfile（构建上下文为模块目录），
+# 单服务独立部署用各模块自己的 docker-compose.yml。
+#
+# 前置条件：
+#   1. 中间件已通过 docker-compose.yml 启动，且网络名为 atifah-net；
+#   2. Nacos 已发布 common-application.yaml（否则业务服务拒绝启动）；
+#   3. 仓库根目录已执行 mvn clean package -DskipTests，各模块 target/ 下有可执行 jar。
+#
+# 全部启动：docker compose --env-file deploy/docker-compose/.env \
+#   -f deploy/docker-compose/docker-compose.app.yml up -d --build
+#   （.env 现仅承载基础镜像/容器资源等可选编排参数，缺失时使用默认值，也可省略 --env-file）
+# 按需启动：在全部启动命令的 up 后指定 gateway auth-service
+# 停止清理：docker compose --env-file deploy/docker-compose/.env \
+#   -f deploy/docker-compose/docker-compose.app.yml down
+#
+# P0 网络安全边界：仅 gateway 发布宿主机端口，其余服务只在 atifah-net 内可达。
+# 本地临时排障如需直连业务服务，请使用 127.0.0.1 绑定的临时 override 文件，
+# 禁止把 8081-8090 直接发布到 0.0.0.0 或生产网络。
+name: atifah-app
+
+# 容器内通过 compose 服务名访问中间件（地址由各模块 application-container.yaml 提供，主密钥在本地 application.yml）。
+x-app-common: &app-common
+  # 统一以 container profile 启动：中间件地址来自 application-container.yaml，
+  # 主密钥由本地 application.yml 兜底、Nacos 生产命名空间覆盖，Nacos 引导凭据走启动参数。
+  # 本地/沙箱必须再显式追加 local（生产部署清单追加 prod）；仅带 container 会被安全护栏拒绝启动。
+  command: ["--spring.profiles.active=container,local"]
+  restart: unless-stopped
+  # 限制单容器内存，JVM 的 MaxRAMPercentage 才能按容器而非宿主机内存计算
+  mem_limit: ${APP_MEM_LIMIT:-1g}
+  # 日志落宿主机仓库根 logs/（目录由 logs/.gitkeep 保留，被删除时先 mkdir -p logs）
+  # 运行 UID/GID 必须与该目录属主一致（Linux 用 id -u / id -g 查看）
+  user: "${APP_UID:-1000}:${APP_GID:-1000}"
+  volumes:
+    - ../../logs:/app/logs
+  networks:
+    - atifah-net
+
+services:
+  gateway:
+    <<: *app-common
+    build:
+      context: ../../atifah-gateway
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/gateway:local
+    container_name: atifah-gateway
+    ports:
+      - "8080:8080"
+      # 管理端点只绑定宿主机回环地址，避免 metrics/gateway/actuator 暴露到公网。
+      - "127.0.0.1:${MANAGEMENT_PORT:-9090}:${MANAGEMENT_PORT:-9090}"
+
+  auth-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/auth-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/auth-service:local
+    container_name: atifah-auth
+    # 内部服务不发布宿主机端口，外部统一经 gateway 的 /api/v1/auth/** 访问。
+    expose:
+      - "8081"
+
+  user-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/user-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/user-service:local
+    container_name: atifah-user
+    expose:
+      - "8082"
+
+  mood-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/mood-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/mood-service:local
+    container_name: atifah-mood
+    expose:
+      - "8083"
+
+  analysis-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/analysis-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/analysis-service:local
+    container_name: atifah-analysis
+    expose:
+      - "8084"
+
+  community-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/community-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/community-service:local
+    container_name: atifah-community
+    expose:
+      - "8085"
+
+  content-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/content-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/content-service:local
+    container_name: atifah-content
+    expose:
+      - "8086"
+
+  message-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/message-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/message-service:local
+    container_name: atifah-message
+    expose:
+      - "8087"
+
+  growth-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/growth-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/growth-service:local
+    container_name: atifah-growth
+    expose:
+      - "8088"
+
+  stats-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-services/stats-service
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/stats-service:local
+    container_name: atifah-stats
+    expose:
+      - "8089"
+
+  admin-service:
+    <<: *app-common
+    build:
+      context: ../../atifah-admin-web/backend
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-eclipse-temurin:21-jre-jammy}
+    image: atifah/admin-service:local
+    container_name: atifah-admin
+    # BFF 只能由 gateway 的 /admin/api/** 路由访问，不直接发布到宿主机。
+    expose:
+      - "8090"
+
+networks:
+  atifah-net:
+    external: true

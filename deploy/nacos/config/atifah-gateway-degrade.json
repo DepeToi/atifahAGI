@@ -1,0 +1,172 @@
+[
+  {
+    "resource": "atifah-auth",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-auth",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-user",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-user",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-mood",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-mood",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-analysis",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-analysis",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-community",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-community",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-content",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-content",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-message",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-message",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-growth",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-growth",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-stats",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-stats",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-admin",
+    "grade": 0,
+    "count": 3000,
+    "slowRatioThreshold": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  },
+  {
+    "resource": "atifah-admin",
+    "grade": 1,
+    "count": 0.5,
+    "timeWindow": 10,
+    "minRequestAmount": 10,
+    "statIntervalMs": 10000
+  }
+]

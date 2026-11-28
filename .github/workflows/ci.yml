@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    # 默认分支是 main；保留 master 以兼容旧分支名
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect / changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.detect.outputs.docs_only }}
+      deploy_changed: ${{ steps.detect.outputs.deploy_changed }}
+      base_ref: ${{ steps.detect.outputs.base_ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Classify changed files
+        id: detect
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          # PR 对比基分支；push 对比前一提交（仓库首个提交无父提交时由脚本跳过）
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "$BASE_BRANCH" ]; then
+            BASE_REF="origin/${BASE_BRANCH}"
+          elif [ -n "$BEFORE_SHA" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_REF="${BEFORE_SHA}"
+          else
+            BASE_REF="HEAD~1"
+          fi
+          echo "base_ref=${BASE_REF}" >> "$GITHUB_OUTPUT"
+          BASE_REF="${BASE_REF}" bash .github/scripts/ci-gates.sh detect
+
+  gates:
+    name: Gates / scope · static · task · diff-size
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: detect
+    env:
+      BASE_REF: ${{ needs.detect.outputs.base_ref }}
+      # push 事件为空，scope-check 会自行跳过（受保护分支由分支保护兜底）
+      PR_BODY: ${{ github.event.pull_request.body }}
+      # status-batch 标签用于维护者批量 done 收口（GIT-02），为空时按普通 PR 处理
+      PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Scope check（变更分类一致性 SCOPE-01/03 · DOC-01 · GIT-07）
+        run: bash .github/scripts/ci-gates.sh scope
+
+      - name: Static gates（静态规则 DB-02 · CODE-01/04/08 · ARCH-03/04）
+        run: bash .github/scripts/ci-gates.sh static
+
+      - name: Task package validation（任务包 front matter DOC-04）
+        run: bash .github/scripts/ci-gates.sh task
+
+      - name: Diff size（生产语义行数 SCOPE-02）
+        run: bash .github/scripts/ci-gates.sh size
+
+  backend:
+    name: Backend / JDK 21
+    needs: detect
+    if: needs.detect.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Maven verify
+        run: mvn -B -ntp verify
+
+  frontend:
+    name: Frontend / Node 22
+    needs: detect
+    if: needs.detect.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: atifah-admin-web/frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: atifah-admin-web/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check and build
+        run: npm run build
+
+  ops-config:
+    name: Ops / compose config
+    needs: detect
+    if: needs.detect.outputs.deploy_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose files
+        run: bash .github/scripts/ci-gates.sh compose
+
+  secret-scan:
+    name: Secret scan / gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 固定版本 CLI 全量历史扫描：gitleaks-action@v2 对首次推送会构造「根提交^..HEAD」
+      # 的非法范围导致失败，CLI 直接扫全量历史，任何事件类型都稳定
+      - name: Run gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar xz
+          ./gitleaks detect --source . --redact --exit-code 1 --report-path gitleaks-results.sarif --report-format sarif

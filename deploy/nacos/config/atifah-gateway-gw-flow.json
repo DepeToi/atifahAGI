@@ -1,0 +1,101 @@
+[
+  {
+    "resource": "atifah-auth",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 20,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-user",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 100,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-mood",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 100,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-analysis",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 300,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-community",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 100,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-content",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 300,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-message",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 300,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-growth",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 100,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-stats",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 300,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-admin",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 50,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  },
+  {
+    "resource": "atifah-message-websocket",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 50,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  }
+]

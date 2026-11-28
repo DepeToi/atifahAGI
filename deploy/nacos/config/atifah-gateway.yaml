@@ -1,0 +1,22 @@
+# 网关私有配置（Nacos data-id: atifah-gateway.yaml, group: ATIFAH_GATEWAY_GROUP）
+# 通过 spring.config.import 可选引入，发布后覆盖本地 application.yml 同名项。
+# 只放需要按环境覆盖或运行时调整的项；路由表、JWT 等稳定/敏感配置保留在本地
+# application.yml 与环境变量，避免两处真相（不要把本地文件整份复制过来）。
+# 刷新语义：rules 在启动时编译为过滤器内的规则快照，修改后需重启网关；
+# auth.enabled 由 @ConditionalOnProperty 在启动时判定过滤器是否装配，修改后需重启网关。
+# 日志配置在 atifah-gateway/src/main/resources/application.yml；如需按环境覆盖，
+# 可在此追加 logging.level.* / atifah.logging.access.*，修改后需重启网关。
+
+atifah:
+  gateway:
+    auth:
+      # P0 安全基线：鉴权默认开启并 fail-closed。
+      # 仅隔离的本地排障环境可显式关闭，生产环境禁止关闭。
+      enabled: true
+      # 免鉴权规则：路径模式 + HTTP 方法；空白名单拒绝所有（fail-closed）
+      rules:
+        - path: /api/v1/auth/**
+          methods:
+            - POST
+        - path: /actuator/**
+          methods: []

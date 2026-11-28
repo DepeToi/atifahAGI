@@ -1,0 +1,12 @@
+# gitleaks 配置：扩展默认规则，仅放行已确认安全的占位值
+# 维护约定：新增放行项必须注明来源提交与原因（SEC-02：禁止放行真实密钥）
+# 注意：extend + fingerprints 组合在 8.24.3 不生效，因此按密文正则精确放行
+[extend]
+useDefault = true
+
+[allowlist]
+description = "历史误报：4b72166（ci-gates.sh）与 e9ba14f3（已删除的 ci-compose-config.sh）中用于 compose 语法校验的 base64 哑变量（明文为 ci-dummy-nacos-token-for-syntax-check），非真实密钥；现行脚本已改用 dummy-token"
+regexTarget = "secret"
+regexes = [
+  '''Y2ktZHVtbXktbmFjb3MtdG9rZW4tZm9yLXN5bnRheC1jaGVjay0wMTIzNDU2Nzg5''',
+]
