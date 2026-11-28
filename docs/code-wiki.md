@@ -572,11 +572,14 @@ curl http://127.0.0.1:9090/actuator/health   # Gateway 管理端口，仅宿主�
 
 ## 13. CI 与构建
 
-[.github/workflows/ci.yml](../.github/workflows/ci.yml) 三个 job：
+[.github/workflows/ci.yml](../.github/workflows/ci.yml) 六个 job：
 
-1. **backend**：JDK 21（Temurin），`mvn -B -ntp verify` 全量验证。
-2. **frontend**：Node 22，`npm ci` + `npm run build`（含 vue-tsc）。
-3. **secret-scan**：gitleaks 密钥扫描。
+1. **detect**：变更分类（docs-only / deploy 变更检测）。
+2. **gates**：变更分类一致性（SCOPE-01/03 · DOC-01 · GIT-07）、静态规则、任务包 front matter（DOC-04）与 diff 大小（SCOPE-02）门禁。
+3. **backend**：JDK 21（Temurin），`mvn -B -ntp verify` 全量验证。
+4. **frontend**：Node 22，`npm ci` + `npm run build`（含 vue-tsc）。
+5. **ops-config**：deploy/** 变更时校验 compose 文件语法。
+6. **secret-scan**：gitleaks 密钥扫描。
 
 CI 只做验证与扫描，不构建/推送镜像（无生产发布流水线）。
 

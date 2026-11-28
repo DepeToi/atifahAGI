@@ -43,7 +43,7 @@ atifah 是一个面向**情绪管理**场景的高并发微服务项目，采用
 | 数据库 | MySQL | 8.0.39（每服务独立库） |
 | 管理后台前端 | Vue 3 + Vite + TypeScript + Element Plus + Pinia | Vue 3.5 / Vite 8 |
 | 部署 | Docker Compose | 中间件 + 后端容器两套编排 |
-| CI | GitHub Actions | JDK 21 / Node 22 / Maven verify / 前端构建 / gitleaks 密钥扫描 |
+| CI | GitHub Actions | 变更门禁 / JDK 21 / Node 22 / Maven verify / 前端构建 / compose 校验 / gitleaks 密钥扫描 |
 
 ## 项目结构
 
@@ -265,9 +265,12 @@ mvn -o -q -DskipTests compile  # 快速编译检查（需先联网完整构建�
 
 CI（`.github/workflows/ci.yml`）：
 
-1. **backend**：JDK 21（Temurin），全量执行 `mvn -B -ntp verify`；
-2. **frontend**：Node 22，`npm ci` + `npm run build`（含 `vue-tsc` 类型检查）；
-3. **secret-scan**：gitleaks 密钥扫描。
+1. **detect**：变更分类（docs-only / deploy 变更检测）；
+2. **gates**：变更分类一致性（SCOPE）、静态规则、任务包 front matter（DOC-04）与 diff 大小（SCOPE-02）门禁；
+3. **backend**：JDK 21（Temurin），全量执行 `mvn -B -ntp verify`；
+4. **frontend**：Node 22，`npm ci` + `npm run build`（含 `vue-tsc` 类型检查）；
+5. **ops-config**：deploy/** 变更时校验 compose 文件语法；
+6. **secret-scan**：gitleaks 密钥扫描。
 
 本地验证直接用 Maven 与 npm 命令（见 [测试](#测试)）。现有 CI 只做验证与密钥扫描，不构建或推送镜像，也不代表已有生产发布流水线。
 
