@@ -18,7 +18,8 @@ Nacos Group `ATIFAH_AUTH_GROUP`。
 - 表结构由 Flyway 管理（`src/main/resources/db/migration/V1__init.sql`、
   `V2__auth_refresh_token.sql`），服务启动时自动迁移；已执行脚本禁止修改，变更走新版本号。
 - 密码只存 BCrypt 哈希；账号不存在时也执行一次哈希比对，避免用响应时间判断账号是否存在。
-- access token 携带 `typ=access` 与 `jti`；refresh token 只存哈希并轮换，重复使用会触发全量吊销；
+- access token 携带 `typ=access` 与 `jti`；refresh token 只存哈希并轮换，超过重用宽限期（默认 30 秒）
+  的重复使用视为泄露并触发全量吊销，宽限期内按并发轮换仅拒绝请求；
   登出当前只撤销 Refresh Token，写入 Redis 黑名单（`auth:token:<jti>`）为后续任务。
 - 注册幂等键、登录失败计数复用 `common-redis` 的 `CacheKeys` / `RedisUtil`；该依赖在本模块 `pom.xml` 显式引入，父 POM 不统一提供。
 

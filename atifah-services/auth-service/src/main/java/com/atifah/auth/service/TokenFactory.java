@@ -38,7 +38,7 @@ public class TokenFactory {
     /** 手机号脱敏保留的后 4 位。 */
     private static final int PHONE_SUFFIX_LENGTH = 4;
 
-    /** 不支持无参构造的安全随机源，进程内复用。 */
+    /** 安全随机源线程安全且创建有开销，进程内复用单例。 */
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final JwtTokenProvider jwtTokenProvider;

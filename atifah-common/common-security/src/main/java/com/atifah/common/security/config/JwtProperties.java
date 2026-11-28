@@ -29,7 +29,7 @@ public class JwtProperties {
      */
     private boolean providerEnabled;
 
-    /** HS256 对称密钥；仅在 local/dev/test 且显式启用 Provider 的服务中配置。 */
+    /** HS256 对称密钥；仅在非生产环境（未激活 profile 按本地语义，或激活 profile 全属 local/dev/test/container）且显式启用 Provider 的服务中配置。 */
     private String secret;
 
     /** RSA 私钥位置（仅签发方），支持 file:/ 或 classpath: 前缀；网关不配置。 */

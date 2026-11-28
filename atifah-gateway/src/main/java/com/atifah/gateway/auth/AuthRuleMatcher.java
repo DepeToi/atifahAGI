@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  */
 public class AuthRuleMatcher {
 
-    /** HTTP 方法格式：大写字母开头，允许数字与连字符，限制长度。 */
+    /** HTTP 方法格式：统一转大写后须匹配 {@code ^[A-Z][A-Z0-9-]{0,31}$}（首字符必须为字母，总长 ≤32）。 */
     private static final Pattern METHOD_PATTERN = Pattern.compile("^[A-Z][A-Z0-9-]{0,31}$");
 
     private final List<CompiledRule> rules;

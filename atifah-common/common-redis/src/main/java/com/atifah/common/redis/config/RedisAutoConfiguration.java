@@ -62,9 +62,9 @@ public class RedisAutoConfiguration {
     }
 
     /**
-     * 本地配置使用 {@code ${REDIS_PASSWORD:}}，未设置密码时得到空字符串。
      * Redisson 只判断密码是否为 null，空串也会发送 AUTH，导致无密码 Redis 拒绝连接
-     * （ERR AUTH called without any password configured）；这里把空白密码归一化为 null。
+     * （ERR AUTH called without any password configured）；这里把空白密码归一化为 null，
+     * 兼容无口令中间件与 ENC() 解密后的空值。
      *
      * @return Redisson 配置定制器
      */

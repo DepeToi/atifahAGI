@@ -24,8 +24,8 @@ atifah-admin-web/
 │   ├── index.html
 │   ├── public/
 │   └── src/
-│       ├── main.ts                # Pinia / Router / Element Plus
-│       ├── App.vue
+│       ├── main.ts                # Pinia / Router / 全局样式
+│       ├── App.vue                # 根组件 + Element Plus 全局配置（zh-cn locale）
 │       ├── api/                   # Axios 实例与统一响应类型
 │       ├── layouts/               # 侧边栏 + 顶栏 + 内容区 + 页脚
 │       ├── router/                # 路由表
@@ -96,13 +96,10 @@ mvn -pl atifah-admin-web/backend -am package -DskipTests
 java -jar atifah-admin-web/backend/target/admin-service-1.0.0-SNAPSHOT.jar
 ```
 
-未启动 Nacos 时可关闭注册与配置：
-
-```bash
-java -jar atifah-admin-web/backend/target/admin-service-1.0.0-SNAPSHOT.jar \
-  --spring.cloud.nacos.discovery.enabled=false \
-  --spring.cloud.nacos.config.enabled=false
-```
+本服务强依赖 Nacos 公共配置：`spring.config.import` 中 `nacos:common-application.yaml` 为必选导入
+（无 `optional:` 前缀），且 `NacosCommonConfigGuard` 在公共配置未装载时直接拒绝启动（fail-closed），
+因此不存在「未启动 Nacos 时启动」的开关；本地联调请先按
+[deploy/nacos/README.md](../deploy/nacos/README.md) 启动 Nacos 并导入公共配置。
 
 - 端口：`8090`
 - 服务名：`atifah-admin`

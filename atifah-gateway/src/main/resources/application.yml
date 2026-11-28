@@ -3,7 +3,7 @@ server:
   shutdown: graceful
   http2:
     enabled: true
-  # 请求头大小上限（默认值显式化，便于运维核对）
+  # 请求头大小上限：显式放宽到 16KB（Boot 默认 8KB），便于运维核对
   max-http-request-header-size: 16KB
 
 spring:

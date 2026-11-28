@@ -20,7 +20,7 @@ ENV TZ=Asia/Shanghai \
     MANAGEMENT_PORT=${MANAGEMENT_PORT} \
     JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8"
 
-# 容器以宿主机 UID 运行时没有对应 passwd 记录，user.home 会落到 /；/tmp 保证 Nacos 快照与 RocketMQ 客户端日志可写
+# 容器以宿主机 UID 运行时没有对应 passwd 记录，user.home 会落到 /；/tmp 保证 Nacos 快照等客户端缓存可写
 ENV HOME=/tmp
 
 # 非 root 运行；基础镜像为 Ubuntu jammy，已自带 bash

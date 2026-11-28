@@ -22,7 +22,7 @@ frontend/
 ├── index.html                 # lang=zh-CN，robots noindex
 ├── vite.config.ts             # 5173 端口、/admin/api 代理、@ 别名
 └── src/
-    ├── main.ts                # Pinia / Router / Element Plus(zh-cn) / 全局样式
+    ├── main.ts                # Pinia / Router / 全局样式（Element Plus zh-cn locale 在 App.vue）
     ├── api/http.ts            # axios 实例 + request<T>() 解包
     ├── api/types.ts           # Result<T> / PageResult<T>
     ├── layouts/AdminLayout.vue

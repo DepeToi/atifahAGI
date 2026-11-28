@@ -57,7 +57,9 @@ public class AccessLogFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 输出访问日志；5xx 使用 ERROR，异常堆栈由 GlobalExceptionHandler 负责。
+     * 输出访问日志；5xx 使用 ERROR。经 @RestControllerAdvice 处理的 5xx 堆栈由
+     * GlobalExceptionHandler 打印；逃逸到过滤器链的异常堆栈由 Servlet 容器兜底输出，
+     * 本过滤器只记单行摘要。
      *
      * @param request 请求
      * @param response 响应

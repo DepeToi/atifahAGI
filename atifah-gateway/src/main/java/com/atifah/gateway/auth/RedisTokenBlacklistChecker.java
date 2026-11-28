@@ -11,7 +11,8 @@ import reactor.core.publisher.Mono;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 基于 Redis 的 jti 黑名单查询；登出由 auth-service 写入 {@code auth:token:<jti>}。
+ * 基于 Redis 的 jti 黑名单查询；写入方（auth-service 登出写 {@code auth:token:<jti>}）
+ * 尚未接入，当前查询恒为未命中，见网关 README 与 SEC-03。
  *
  * @author DepeToi
  * @since 1.0.0

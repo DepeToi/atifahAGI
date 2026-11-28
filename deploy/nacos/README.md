@@ -73,6 +73,7 @@
 |---|---|---|
 | `common-application.yaml` | `ATIFAH_PUBLIC_GROUP` | 10 个业务服务共享配置（Redis/MyBatis-Plus/Jackson/Sentinel/OpenFeign/RocketMQ/Actuator/日志 + 主密钥 `atifah.crypto.master-key`），不下发 JWT 密钥；密钥类（如 Redis 口令）以 `ENC()` 密文存放 |
 | `atifah-gateway.yaml` | `ATIFAH_GATEWAY_GROUP` | 网关私有配置（鉴权开关/免鉴权规则 + 网关主密钥覆盖；网关不导入公共配置，生产主密钥在此下发；`auth.enabled` 与 `rules` 在启动时装配，修改后需重启网关） |
+| `atifah-gateway-gw-flow.json` / `atifah-gateway-degrade.json` | `ATIFAH_GATEWAY_GROUP` | 网关 Sentinel 限流/熔断规则（已入库的规划资产，尚未接入 datasource，导入后生效） |
 | `${spring.application.name}.yaml` | 各服务自己的 `ATIFAH_<服务名大写>_GROUP` | 各服务私有覆盖配置（可选，用于按服务覆盖共享项） |
 
 容器沙箱地址（compose 服务名）不进 Nacos：由各模块本地 `application-container.yaml` 承载

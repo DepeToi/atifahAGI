@@ -57,8 +57,8 @@ openssl rand -base64 32        # 把输出填入 .env 的 NACOS_AUTH_TOKEN
 docker compose -f deploy/docker-compose/docker-compose.yml up -d
 ```
 
-会拉起 MySQL / Redis / Nacos / RocketMQ / Sentinel（Seata `--profile seata`、
-Nginx `--profile nginx` 按需启用）。
+会拉起 MySQL / Redis / Nacos / RocketMQ；RocketMQ / Sentinel 控制台需 `--profile ops`，
+Seata `--profile seata`、Nginx `--profile nginx` 按需启用。
 常用地址（完整表见 [README.md](README.md#中间件与环境依赖)）：
 
 | 组件 | 地址 |
@@ -287,7 +287,8 @@ npm run dev
 ## 8. 健康检查与排障
 
 方案 A 的进程端口与方案 B 的容器内部端口一致，但 Compose 只发布网关端口。
-网关管理端点固定在 `9090`，且只绑定宿主机回环地址：
+网关管理端点固定在 `9090`；方案 B 经 Compose 仅映射到宿主机回环地址，
+方案 A JVM 直跑时监听全部网卡，需自行用防火墙或绑定参数限制：
 
 ```bash
 curl http://127.0.0.1:9090/actuator/health   # Gateway

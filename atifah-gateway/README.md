@@ -55,7 +55,7 @@ API 网关，Spring Cloud Gateway（WebFlux 变体，HTTP/2），端口 `8080`�
 
 ## 真实 IP
 
-仅当 TCP 对端命中 `TRUSTED_PROXIES`（默认回环 + RFC1918/ULA）时解析
+仅当 TCP 对端命中 `atifah.gateway.client-ip.trusted-proxies`（默认回环 + RFC1918/ULA）时解析
 `X-Forwarded-For` / `X-Real-IP`，直连伪造头不生效；解析结果供访问日志与 IP 频控复用。
 
 ## WebSocket
@@ -68,8 +68,8 @@ API 网关，Spring Cloud Gateway（WebFlux 变体，HTTP/2），端口 `8080`�
 - Actuator 使用独立管理端口 `9090`，暴露 `health,info,gateway,metrics,prometheus`。
   Compose 仅把 `9090` 绑定到宿主机回环地址；业务端口 `8080` 不反向代理该管理端口。
 - 接入 Sentinel Dashboard（`eager: true`）。
-- 访问日志启动后包装为异步 appender（`GATEWAY_LOG_ASYNC` / `GATEWAY_LOG_ASYNC_QUEUE`），
-  2xx/3xx 可按 `GATEWAY_ACCESS_LOG_SAMPLE_RATE` 采样，4xx/5xx 始终全量。
+- 访问日志启动后包装为异步 appender（`atifah.logging.async.enabled` / `atifah.logging.async.queue-size`），
+  2xx/3xx 可按 `atifah.logging.access.sample-rate` 采样，4xx/5xx 始终全量。
 
 ## 兼容性
 

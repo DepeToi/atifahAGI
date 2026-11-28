@@ -1,5 +1,6 @@
-# 后端镜像构建上下文为仓库根目录；仅 COPY 各模块 target/ 下的可执行 jar，
-# 因此必须保留 target/，其余无关内容全部排除以缩小上下文。
+# 日常镜像构建以各模块目录为上下文（见各模块 .dockerignore 与 docker-compose.app.yml），
+# 本文件仅在从仓库根目录手动构建时生效：保留 target/（COPY 可执行 jar），
+# 其余无关内容全部排除以缩小上下文。
 .git
 .gitignore
 .gitattributes

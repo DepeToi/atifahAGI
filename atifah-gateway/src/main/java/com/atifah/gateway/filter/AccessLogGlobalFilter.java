@@ -71,7 +71,7 @@ public class AccessLogGlobalFilter implements GlobalFilter, Ordered {
     }
 
     /**
-     * 记录网关下游错误；异常堆栈只在这里保留一次。
+     * 记录网关下游错误；5xx 异常堆栈在此与 GatewayErrorWebExceptionHandler 各输出一次，便于交叉排障。
      *
      * @param traceId 链路 ID
      * @param method 请求方法

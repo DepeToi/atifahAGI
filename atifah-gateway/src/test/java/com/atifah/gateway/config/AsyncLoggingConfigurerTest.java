@@ -15,7 +15,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * 异步日志装配测试：每个底层 appender 单独包装，避免 Logback 只接受一个附加 appender。
+ * 异步日志装配测试：每个底层 appender 单独包装为 AsyncAppender，各自持有独立队列与丢弃策略。
  *
  * @author DepeToi
  * @since 1.0.0

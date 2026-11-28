@@ -35,7 +35,7 @@ public class GatewayRequestSizeProperties {
     @Setter
     public static class Override {
 
-        /** Ant 风格路径模式，与路由 Path 谓词语义一致。 */
+        /** Ant 风格路径模式（AntPathMatcher 匹配，与路由 Path 谓词的 PathPatternParser 语义存在差异）。 */
         private String path;
 
         /** 该路径的请求体上限；为空时使用全局默认值。 */
