@@ -333,6 +333,18 @@ do_compose() {
     echo "校验 $f"
     docker compose "${env_args[@]}" -f "$f" config -q
   done
+  # 测试/生产模板含 :? 必填占位变量，用一次性哑变量校验语法（不启动容器，哑值不入库）
+  if [ -f deploy/test/docker-compose.yml ]; then
+    echo "校验 deploy/test/docker-compose.yml（哑变量）"
+    REGISTRY=registry.example APP_VERSION=0.0.0 NACOS_ADDR=nacos:8848 NACOS_NAMESPACE=atifah_test \
+      docker compose -f deploy/test/docker-compose.yml config -q
+  fi
+  if [ -f deploy/prod/compose-template.yml ]; then
+    echo "校验 deploy/prod/compose-template.yml（哑变量）"
+    REGISTRY=registry.example APP_VERSION=0.0.0 NACOS_ADDR=nacos:8848 NACOS_NAMESPACE=atifah_prod \
+      NACOS_USERNAME=dummy NACOS_PASSWORD=dummy JWT_PUBLIC_KEY=/dev/null JWT_PRIVATE_KEY=/dev/null \
+      docker compose -f deploy/prod/compose-template.yml config -q
+  fi
   echo "compose 配置校验通过"
 }
 
