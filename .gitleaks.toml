@@ -9,4 +9,10 @@ description = "历史误报：4b72166（ci-gates.sh）与 e9ba14f3（已删除�
 regexTarget = "secret"
 regexes = [
   '''Y2ktZHVtbXktbmFjb3MtdG9rZW4tZm9yLXN5bnRheC1jaGVjay0wMTIzNDU2Nzg5''',
+  # 8f61201：SEC-02 设计内的仓库开发哑主密钥（SecretPropertySourceScanner.DEV_MASTER_KEY，
+  # 各服务 application.yml / 网关 / Nacos 公共配置兜底值），只解密仓库内哑密文，
+  # 生产从 Nacos 下发真实主密钥且兜底取到该值会拒绝启动；非真实密钥
+  '''Vct5lyW9M9uW9GltsCt7V41lWIzO6JNugYRTVMw1Li0=''',
+  # 8f61201：GatewayApplicationContextTest 测试 profile 的明文哑 JWT 密钥（HS256 ≥32 字节占位），非真实密钥
+  '''jwt-test-secret-0123456789012345678901''',
 ]
